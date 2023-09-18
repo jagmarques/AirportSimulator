@@ -1,0 +1,202 @@
+#ifndef headers_h
+#define headers_h
+
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/msg.h> 
+#include <signal.h>
+#include <sys/mman.h>
+
+#define SHM_KEY_FLIGHTS 11
+#define SHM_KEY_STATS 22
+#define DEBUG 0
+
+#define SIZENAMES 10
+#define MAXSIZE 50
+#define DEPARTURE 1
+#define ARRIVAL 2
+
+typedef struct
+{   
+    int isAvaiable;
+    int shmSlotNr;
+    int takeoff;
+} DepartureTrack;
+
+typedef struct 
+{   
+    int isAvaiable;
+    int shmSlotNr;
+    int eta;
+    int takeoff;
+} ArrivalTrack;
+
+typedef struct
+{
+    long msgtype;
+    pthread_t tid;
+    int takeoff;
+	int eta;
+	int fuel;
+} MQRequest;
+
+typedef struct slot
+{
+    int isAvaiable;
+    int instruction; //1- Descolar | 2- Aterrar | 3- Holding | 4- Desvio
+} Slot;
+
+typedef struct config 
+{
+    int unitTime, 
+    duractionDeparture,
+    intervalDeparture,
+    duractionArrival,
+    intervalArrival,
+    holdingMin,
+    holdingMax,
+    maxDepartures,
+    maxArrivals;
+} Config;
+
+typedef struct stats{
+    int nFlights;
+    int nFlights_Arrived;
+	int nFlights_Departured;
+	int tMediumWait_Arrival;
+	int tMediumWait_Departure;
+	int nMediumHoldigns_Arrival;
+	int nMediumHoldigns_UrgencyState;
+	int nFlights_Redirected;
+	int nFlights_Rejected;
+} Stats;
+
+typedef struct departureFlight
+{
+    int init;
+    int takeoff;   
+} DepartureFlight;
+
+typedef struct arrivalFlight
+{
+    int init;
+    int eta;
+    int fuel;
+} ArrivalFlight;
+
+typedef struct flight
+{
+    int f; //0 é partida, 1 é chegada
+    char flightCode[MAXSIZE];
+    DepartureFlight dFlight;
+    ArrivalFlight aFlight;
+} Flight;
+
+typedef struct flightNode
+{
+    Flight flight;
+    struct flightNode *next;
+} FlightNode;
+
+//--Structs da Tower
+typedef struct
+{   
+    int shmSlotNr;
+    int takeoff;
+} DepartureToTrack;
+
+typedef struct 
+{   
+    int shmSlotNr;
+    int eta;
+    int fuel;
+} ArrivalToTrack;
+
+typedef struct departureToTrackNode
+{
+    DepartureToTrack departureToTrack;
+    struct departureToTrackNode *next;
+} DepartureToTrackNode;
+
+typedef struct arrivalToTrackNode
+{
+    ArrivalToTrack arrivalToTrack;
+    struct arrivalToTrackNode *next;
+} ArrivalToTrackNode;
+
+//--Gestor
+void *slotsP;
+void *statsP;
+
+int shmidSlots, shmidStats;
+
+int startTime;
+double unitTime;
+
+int mqID;
+
+int thread_incr;
+//--
+//--Tower
+DepartureToTrackNode *headDepartureToTracks;
+ArrivalToTrackNode *headArrivalToTracks;
+//--
+
+void handler(int signum);
+
+void addMQRequest(MQRequest request);
+void readMQRequest();
+
+int verifyFlightID(char *s);
+int verifyCommand(char *s);
+
+Flight flightInfo(char *s);
+void addFlight(void *headFlights, Flight flight);
+void removeFlight(FlightNode *headFlights);
+void printFlights(FlightNode *headFlights);
+void *manageFlightsList(void *headFlights);
+void *startFlightThread(void *args);
+void createFlightThread(Flight flight);
+
+int convertToSeconds(int hour, int minute, int sec);
+int getTime();
+int currentTime();
+
+void writeLogReport(int time, char *s);
+Config loadConfig();
+void startSemaphores();
+void startSharedMemory(int maxDepartures, int maxArrivals);
+void startMQ();
+void startPipe();
+
+//--- Funcões da control tower
+void startSharedMemoryTower(int maxDepartures, int maxArrivals);
+void startTracks(Config config);
+int findShmSlot(Config config);
+void freeShmSlot(int shmSlotnr);
+void controlTower(Config config);
+
+void handleRequest(MQRequest request, Config *config);
+void createMQDepartureRequestThread(Config config);
+void createMQArrivalRequestThread(Config config);
+void addDepartureToTrack(MQRequest request, Config *config);
+void addArrivalToTrack(MQRequest request, Config *config, int isPriority);
+int checkPriority(MQRequest request, int duractionArrival);
+void printArrivalToTracks();
+void printDepartureToTracks();
+
+#endif /* headers_h */
