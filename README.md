@@ -1,10 +1,10 @@
 # Airport Simulator
 
-**Overview:**
+##Overview:
 
 AirportSimulator is a program that simulates the operation of an airport using pipes, shared memory, mutexes, and condition variables. It receives commands from a pipe, logs the events to a file, and shows statistics when signaled.
 
-**Usage:**
+##Usage:
 
 1. Open two terminals:
 
@@ -17,10 +17,12 @@ AirportSimulator is a program that simulates the operation of an airport using p
 
 4. To gracefully terminate the program, use Ctrl+C, and all resources used will be released.
 
-**Concurrency Handling:**
+
+##Concurrency Handling:
 
 Mutexes are used to lock functions and threads accessing or modifying the same data. Condition variables are used to notify threads when an event occurs and they need to resume execution.
 
-**Shared Memory:**
+
+##Shared Memory:
 
 Shared memory is used to store data shared between different parts of the program, and a condition variable is placed in shared memory to notify the simulation manager when the data has changed.
