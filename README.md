@@ -1,6 +1,6 @@
 # Airport Simulator
 
-## Overview:
+## Overview
 
 Program that simulates the operation of an airport using pipes, shared memory, mutexes, and condition variables. It receives commands from a pipe, logs the events to a file, and shows statistics when signaled.
 
