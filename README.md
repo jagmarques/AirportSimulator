@@ -45,10 +45,3 @@ Whenever you change this file you must restart the simulator to reload the value
   Remove stale queues via `ipcrm` if necessary.
 - **Shared-memory leaks** – the signal handler now destroys all shared memory segments, but if the program terminates abruptly you can remove them with `ipcs` + `ipcrm`.
 - **FIFO write failures** – make sure the simulator is already running and has opened `input_pipe` for reading before executing `bin/send_info` or your own scripts.
-
-## Contributing
-1. Open an issue describing the fix or enhancement.
-2. Submit a pull request that includes:
-   - Updated tests or repro steps.
-   - Clear comments for any new public functions or data structures.
-   - A concise summary in the README if behavior changes.
