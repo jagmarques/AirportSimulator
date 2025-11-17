@@ -5,10 +5,7 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 
-/**
- * @file airport.h
- * @brief Shared data structures and declarations for the airport simulator.
- */
+// Shared data structures and declarations for the airport simulator.
 
 #include <ctype.h>
 #include <errno.h>
@@ -51,26 +48,20 @@
 #define ARRIVAL_28L 10 
 #define ARRIVAL_28R 11 
 
-/**
- * @brief Message queue payload exchanged between the CLI and the tower.
- */
 typedef struct
 {
-    long msgtype;        /**< Message queue type used for routing. */
-    pthread_t tid;       /**< Thread identifier that originated the request. */
-    int shmSlotNr;       /**< Shared-memory slot associated with the request. */
-    char flightCode[10]; /**< Unique flight code, e.g. TP123. */
-    int takeoff;         /**< Requested take-off timestamp. */
-    int eta;             /**< Estimated time of arrival. */
-    int fuel;            /**< Remaining fuel when approaching the airport. */
+    long msgtype;        // Message queue type used for routing.
+    pthread_t tid;       // Thread identifier that originated the request.
+    int shmSlotNr;       // Shared-memory slot associated with the request.
+    char flightCode[10]; // Unique flight code, e.g. TP123.
+    int takeoff;         // Requested take-off timestamp.
+    int eta;             // Estimated time of arrival.
+    int fuel;            // Remaining fuel when approaching the airport.
 } MQRequest;
 
-/**
- * @brief Slots stored in shared memory to communicate instructions to flights.
- */
 typedef struct slot
 {
-    int isAvaiable; /**< Flag indicating whether the slot can be reused. */
+    int isAvaiable; // Flag indicating whether the slot can be reused.
     int instruction;
     int trackName;
     int holdingTime;

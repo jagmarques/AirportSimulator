@@ -1,7 +1,4 @@
-/**
- * @file sendInfo.c
- * @brief Simple utility used to push scripted commands through the FIFO.
- */
+// Simple utility used to push scripted commands through the FIFO.
 
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L

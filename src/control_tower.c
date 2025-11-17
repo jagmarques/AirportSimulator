@@ -3,9 +3,7 @@
 pthread_mutex_t lockArrival = PTHREAD_MUTEX_INITIALIZER;
 int systemTime;
 
-/**
- * @brief Sends slot information back to the requesting flight thread.
- */
+// Sends slot information back to the requesting flight thread.
 void MQRequestToFlight(MQRequest request)
 {  
     request.msgtype = request.tid;
@@ -21,9 +19,7 @@ void MQRequestToFlight(MQRequest request)
     }
 }
 
-/**
- * @brief Dispatches the MQ request to the right queue, applying priorities.
- */
+// Dispatches the MQ request to the right queue, applying priorities.
 void handleRequest(MQRequest request) //Meter sincronizações!
 {   
     //Aumentar o contador de numero de voos - Pode ser um semaforo ! 
@@ -49,9 +45,7 @@ void handleRequest(MQRequest request) //Meter sincronizações!
 
 }
 
-/**
- * @brief Marks a shared-memory slot as reusable by clearing its state.
- */
+// Marks a shared-memory slot as reusable by clearing its state.
 void freeShmSlot(int shmSlotnr) //Mecanismo de sincronização !!!-?
 {
     Slot *tempSlot = (Slot*)slotsP;
@@ -60,9 +54,7 @@ void freeShmSlot(int shmSlotnr) //Mecanismo de sincronização !!!-?
     tempSlot[shmSlotnr].holdingTime = 0;
 }
 
-/**
- * @brief Returns the first available shared-memory slot or -1 if none exist.
- */
+// Returns the first available shared-memory slot or -1 if none exist.
 int findShmSlot() //Mecanismos de sincronização !!!-?
 {
     int max = config.maxDepartures+config.maxDepartures;
