@@ -1,0 +1,9 @@
+# Build artifacts
+bin/
+build/
+*.o
+
+# Logs and runtime files
+*.log
+input_pipe
+airport_log.txt

@@ -1,4 +1,4 @@
-#include "headers.h"
+#include "airport.h"
 
 //-----------------------------------------------------------------------------------------
 
@@ -11,6 +11,35 @@ pthread_mutex_t lockTest = PTHREAD_MUTEX_INITIALIZER;
 
 bool SMHChangedFlight;
 
+void *slotsP = NULL;
+void *statsP = NULL;
+void *slotT = NULL;
+void *slotCV = NULL;
+void *slotSHMChanged = NULL;
+
+int shmidSlots = -1;
+int shmidStats = -1;
+int shmidSlotTime = -1;
+int shmidCondVar = -1;
+int shmidSMHChanged = -1;
+
+int startTime = 0;
+double unitTime = 0;
+
+int mqID = -1;
+int thread_incr = 0;
+
+DepartureTrackNode *headDepartureTracks = NULL;
+ArrivalTrackNode *headArrivalTracks = NULL;
+
+int controlTower_pid = -1;
+Config config;
+int nrMaxDepartures = 0;
+int nrMaxArrivals = 0;
+
+/**
+ * @brief Signal handler that tears down every shared resource before exiting.
+ */
 void handlerTerminate(int signum)
 {
     pid_t  p;
@@ -53,12 +82,16 @@ void handlerTerminate(int signum)
     exit(signum);
 }
 
+/**
+ * @brief Handler that prints a snapshot of the accumulated statistics.
+ */
 void handlerStats(int signum)
 {
+    (void)signum;
     Stats *ts = (Stats*)statsP;
-    
+
     doAverages();
-    
+
     printf("Total flights: %d", ts[0].nFlights);
     printf("Arrive flights: %d", ts[0].nFlights_Arrived);
     printf("Departure flights: %d", ts[0].nFlights_Departured);
@@ -70,16 +103,55 @@ void handlerStats(int signum)
     printf("Rejected flights: %d", ts[0].nFlights_Rejected);
 }
 
+/**
+ * @brief Computes averages while guarding against divisions by zero.
+ */
 void doAverages()
 {
     Stats *ts = (Stats*)statsP;
 
-    ts[0].tAverageWait_Arrival = (ts[0].tAverageWait_Arrival)/(ts[0].nFlights_Arrived);
-    ts[0].tAverageWait_Departure = (ts[0].tAverageWait_Departure)/(ts[0].nFlights_Departured);
-    ts[0].nAverageHoldigns_Arrival = (ts[0].nAverageHoldigns_Arrival)/(ts[0].nAverageHoldigns_Arrival);
-    ts[0].nAverageHoldigns_UrgencyState = (ts[0].nAverageHoldigns_UrgencyState)/(ts[0].tAverageWait_Arrival);
+    if (ts[0].nFlights_Arrived > 0)
+    {
+        ts[0].tAverageWait_Arrival = ts[0].tAverageWait_Arrival / ts[0].nFlights_Arrived;
+        ts[0].nAverageHoldigns_Arrival = ts[0].nAverageHoldigns_Arrival / ts[0].nFlights_Arrived;
+        ts[0].nAverageHoldigns_UrgencyState = ts[0].nAverageHoldigns_UrgencyState / ts[0].nFlights_Arrived;
+    }
+    else
+    {
+        ts[0].tAverageWait_Arrival = 0;
+        ts[0].nAverageHoldigns_Arrival = 0;
+        ts[0].nAverageHoldigns_UrgencyState = 0;
+    }
+
+    if (ts[0].nFlights_Departured > 0)
+    {
+        ts[0].tAverageWait_Departure = ts[0].tAverageWait_Departure / ts[0].nFlights_Departured;
+    }
+    else
+    {
+        ts[0].tAverageWait_Departure = 0;
+    }
 }
 
+/**
+ * @brief Sleeps for the specified microseconds using nanosleep.
+ */
+void sleepForMicros(long micros)
+{
+    if (micros <= 0)
+    {
+        return;
+    }
+
+    struct timespec ts;
+    ts.tv_sec = micros / 1000000;
+    ts.tv_nsec = (micros % 1000000) * 1000;
+    nanosleep(&ts, NULL);
+}
+
+/**
+ * @brief Returns true if the flight should be considered a priority arrival.
+ */
 int checkPriority(MQRequest request)
 {
     if(request.fuel <= (4 + request.eta + config.duractionArrival))
@@ -90,8 +162,11 @@ int checkPriority(MQRequest request)
     return false;
 }
 
-void addMQRequest(MQRequest request) 
-{   
+/**
+ * @brief Pushes a request to the message queue while logging emergencies.
+ */
+void addMQRequest(MQRequest request)
+{
     bool isPriority;
     char aux[200];
 
@@ -111,11 +186,14 @@ void addMQRequest(MQRequest request)
         printf("error sending\n");
     }
     else
-    {   
-        printf("Message Sent\n"); 
+    {
+        printf("Message Sent\n");
     }
 }
 
+/**
+ * @brief Continuously reads requests from the specified message queue channel.
+ */
 void readMQRequest(long msgtype)
 {
     MQRequest request;
@@ -134,10 +212,13 @@ void readMQRequest(long msgtype)
     
 }
 
+/**
+ * @brief Ensures the flight identifier follows the TPnnn format.
+ */
 int verifyFlightID(char *s)
 {
     if (s[0] == 'T' && s[1] == 'P')
-    {   
+    {
         return 1;
     }
     else
@@ -146,6 +227,9 @@ int verifyFlightID(char *s)
     }
 }
 
+/**
+ * @brief Parses and validates user commands sent through the FIFO.
+ */
 int verifyCommand(char *s)
 {   
     char command[200];
@@ -512,7 +596,7 @@ void *manageFlightsList(void *headFlights)
         
         pthread_mutex_unlock(&lockAddFlight);
         
-        usleep(unitTime*1000000);
+        sleepForMicros((long)(unitTime*1000000));
     }
 }
 
@@ -542,7 +626,8 @@ void *startFlightThread(void *args)
     }
 
     char aux[200];
-    printf(aux, "%s thread %ld started\n", flight->flightCode, tid);
+    snprintf(aux, sizeof(aux), "%s thread %ld started\n", flight->flightCode, tid);
+    printf("%s", aux);
     addMQRequest(request);
 
     if(msgrcv(mqID, &request, sizeof(request), tid, 0) < 0)
@@ -580,6 +665,7 @@ bool checkSHM(int shmSlotNr, MQRequest request)
     Slot *t = (Slot*)slotsP;
     char aux[MAXSIZE];
     char trackName[10];
+    trackName[0] = '\0';
 
     if(t[shmSlotNr].instruction != - 1)
     {
@@ -605,7 +691,7 @@ bool checkSHM(int shmSlotNr, MQRequest request)
             sprintf(aux, "%s DEPARTURE %s started\n", request.flightCode, trackName);
             writeLogReport(currentTime(), aux);
            
-            usleep(config.unitTime * config.duractionDeparture * 1000);
+            sleepForMicros(config.unitTime * config.duractionDeparture * 1000);
             memset(aux, 0 ,strlen(aux));
 
             sprintf(aux, "%s DEPARTURE %s concluded\n", request.flightCode, trackName);
@@ -618,7 +704,7 @@ bool checkSHM(int shmSlotNr, MQRequest request)
             sprintf(aux, "%s LANDING %s started\n", request.flightCode, trackName);
             writeLogReport(currentTime(), aux);
            
-            usleep(config.unitTime * config.duractionDeparture * 1000);
+            sleepForMicros(config.unitTime * config.duractionDeparture * 1000);
             memset(aux, 0 ,strlen(aux));
 
             sprintf(aux, "%s LANDING %s concluded\n", request.flightCode, trackName);
@@ -908,7 +994,7 @@ void startPipe()
         memset(rCommand, 0 ,strlen(rCommand));
         memset(wCommand, 0 ,strlen(wCommand));
 
-        read(fd, command, 400);
+        read(fd, command, sizeof(command));
 
         strcpy(rCommand, "NEW COMMAND => ");
         strcpy(wCommand, "WRONG COMMAND => ");
@@ -931,7 +1017,9 @@ void startPipe()
 }
 
 int main(int argc, char const *argv[])
-{   
+{
+    (void)argc;
+    (void)argv;
     system("clear");
 
     signal(SIGHUP,SIG_IGN);

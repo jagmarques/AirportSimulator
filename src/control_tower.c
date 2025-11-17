@@ -1,8 +1,11 @@
-#include "headers.h"
+#include "airport.h"
 
 pthread_mutex_t lockArrival = PTHREAD_MUTEX_INITIALIZER;
 int systemTime;
 
+/**
+ * @brief Sends slot information back to the requesting flight thread.
+ */
 void MQRequestToFlight(MQRequest request)
 {  
     request.msgtype = request.tid;
@@ -18,6 +21,9 @@ void MQRequestToFlight(MQRequest request)
     }
 }
 
+/**
+ * @brief Dispatches the MQ request to the right queue, applying priorities.
+ */
 void handleRequest(MQRequest request) //Meter sincronizações!
 {   
     //Aumentar o contador de numero de voos - Pode ser um semaforo ! 
@@ -43,6 +49,9 @@ void handleRequest(MQRequest request) //Meter sincronizações!
 
 }
 
+/**
+ * @brief Marks a shared-memory slot as reusable by clearing its state.
+ */
 void freeShmSlot(int shmSlotnr) //Mecanismo de sincronização !!!-?
 {
     Slot *tempSlot = (Slot*)slotsP;
@@ -51,6 +60,9 @@ void freeShmSlot(int shmSlotnr) //Mecanismo de sincronização !!!-?
     tempSlot[shmSlotnr].holdingTime = 0;
 }
 
+/**
+ * @brief Returns the first available shared-memory slot or -1 if none exist.
+ */
 int findShmSlot() //Mecanismos de sincronização !!!-?
 {
     int max = config.maxDepartures+config.maxDepartures;
@@ -70,6 +82,7 @@ int findShmSlot() //Mecanismos de sincronização !!!-?
 
 void *readMQPriorityRequest(void *args)
 {
+    (void)args;
     MQRequest request;
     
     //Fazer semafros, só faço handle quando o ultimo acabar
@@ -244,6 +257,7 @@ void removeArrivalTrack(ArrivalTrackNode *temp, ArrivalTrackNode *previous)
 
 void *readMQArrivalRequest(void *args)
 {
+    (void)args;
     MQRequest request;
     
     //Fazer semafros, só faço handle quando o ultimo acabar
@@ -355,6 +369,7 @@ void removeDepartureTrack()
 
 void *readMQDepartureRequest(void *args)
 {
+    (void)args;
     MQRequest request;
     
     //Fazer semafros, só faço handle quando o ultimo acabar
@@ -710,7 +725,7 @@ void *systemTimeThread(void *arg) //Mecanismos de sincronização?
         
         escalonarVoo(systemTime, &dep01L, &dep01R, &arr28L, &arr28R);
 
-        usleep(unitTime);
+        sleepForMicros(unitTime);
         //printf("Time: %d\n", tt[0].systemCurrentTime);
         systemTime += 1;
         tt[0].systemCurrentTime = systemTime;
