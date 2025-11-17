@@ -37,9 +37,7 @@ Config config;
 int nrMaxDepartures = 0;
 int nrMaxArrivals = 0;
 
-/**
- * @brief Signal handler that tears down every shared resource before exiting.
- */
+// Signal handler that tears down every shared resource before exiting.
 void handlerTerminate(int signum)
 {
     pid_t  p;
@@ -82,9 +80,7 @@ void handlerTerminate(int signum)
     exit(signum);
 }
 
-/**
- * @brief Handler that prints a snapshot of the accumulated statistics.
- */
+// Handler that prints a snapshot of the accumulated statistics.
 void handlerStats(int signum)
 {
     (void)signum;
@@ -103,9 +99,7 @@ void handlerStats(int signum)
     printf("Rejected flights: %d", ts[0].nFlights_Rejected);
 }
 
-/**
- * @brief Computes averages while guarding against divisions by zero.
- */
+// Computes averages while guarding against divisions by zero.
 void doAverages()
 {
     Stats *ts = (Stats*)statsP;
@@ -133,9 +127,7 @@ void doAverages()
     }
 }
 
-/**
- * @brief Sleeps for the specified microseconds using nanosleep.
- */
+// Sleeps for the specified microseconds using nanosleep.
 void sleepForMicros(long micros)
 {
     if (micros <= 0)
@@ -149,9 +141,7 @@ void sleepForMicros(long micros)
     nanosleep(&ts, NULL);
 }
 
-/**
- * @brief Returns true if the flight should be considered a priority arrival.
- */
+// Returns true if the flight should be considered a priority arrival.
 int checkPriority(MQRequest request)
 {
     if(request.fuel <= (4 + request.eta + config.duractionArrival))
@@ -162,9 +152,7 @@ int checkPriority(MQRequest request)
     return false;
 }
 
-/**
- * @brief Pushes a request to the message queue while logging emergencies.
- */
+// Pushes a request to the message queue while logging emergencies.
 void addMQRequest(MQRequest request)
 {
     bool isPriority;
@@ -191,9 +179,7 @@ void addMQRequest(MQRequest request)
     }
 }
 
-/**
- * @brief Continuously reads requests from the specified message queue channel.
- */
+// Continuously reads requests from the specified message queue channel.
 void readMQRequest(long msgtype)
 {
     MQRequest request;
@@ -212,9 +198,7 @@ void readMQRequest(long msgtype)
     
 }
 
-/**
- * @brief Ensures the flight identifier follows the TPnnn format.
- */
+// Ensures the flight identifier follows the TPnnn format.
 int verifyFlightID(char *s)
 {
     if (s[0] == 'T' && s[1] == 'P')
@@ -227,9 +211,7 @@ int verifyFlightID(char *s)
     }
 }
 
-/**
- * @brief Parses and validates user commands sent through the FIFO.
- */
+// Parses and validates user commands sent through the FIFO.
 int verifyCommand(char *s)
 {   
     char command[200];
