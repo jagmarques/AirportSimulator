@@ -1,25 +1,34 @@
-#ifndef headers_h
-#define headers_h
+#ifndef AIRPORT_H
+#define AIRPORT_H
+
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
+/**
+ * @file airport.h
+ * @brief Shared data structures and declarations for the airport simulator.
+ */
 
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <signal.h>
 #include <stdbool.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ipc.h>
+#include <sys/mman.h>
+#include <sys/msg.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <unistd.h>
 #include <time.h>
-#include <sys/msg.h> 
-#include <signal.h>
-#include <sys/mman.h>
+#include <unistd.h>
 
 #define SHM_KEY_FLIGHTS 11
 #define SHM_KEY_STATS 22
@@ -42,20 +51,26 @@
 #define ARRIVAL_28L 10 
 #define ARRIVAL_28R 11 
 
+/**
+ * @brief Message queue payload exchanged between the CLI and the tower.
+ */
 typedef struct
 {
-    long msgtype;
-    pthread_t tid;
-    int shmSlotNr;
-    char flightCode[10];
-    int takeoff;
-	int eta;
-	int fuel;
+    long msgtype;        /**< Message queue type used for routing. */
+    pthread_t tid;       /**< Thread identifier that originated the request. */
+    int shmSlotNr;       /**< Shared-memory slot associated with the request. */
+    char flightCode[10]; /**< Unique flight code, e.g. TP123. */
+    int takeoff;         /**< Requested take-off timestamp. */
+    int eta;             /**< Estimated time of arrival. */
+    int fuel;            /**< Remaining fuel when approaching the airport. */
 } MQRequest;
 
+/**
+ * @brief Slots stored in shared memory to communicate instructions to flights.
+ */
 typedef struct slot
 {
-    int isAvaiable;
+    int isAvaiable; /**< Flag indicating whether the slot can be reused. */
     int instruction;
     int trackName;
     int holdingTime;
@@ -72,8 +87,8 @@ typedef struct slotSHMChanged
 } SlotSHMChanged;
 
 typedef struct slotCondVar {
-	pthread_mutex_t lockSHM;
-	pthread_cond_t condSHM;
+    pthread_mutex_t lockSHM;
+    pthread_cond_t condSHM;
 } SlotCondVar;
 
 typedef struct config 
@@ -92,13 +107,13 @@ typedef struct config
 typedef struct stats{
     int nFlights;
     int nFlights_Arrived;
-	int nFlights_Departured;
-	int tAverageWait_Arrival;
-	int tAverageWait_Departure;
-	int nAverageHoldigns_Arrival;
-	int nAverageHoldigns_UrgencyState;
-	int nFlights_Diverted;
-	int nFlights_Rejected;
+    int nFlights_Departured;
+    int tAverageWait_Arrival;
+    int tAverageWait_Departure;
+    int nAverageHoldigns_Arrival;
+    int nAverageHoldigns_UrgencyState;
+    int nFlights_Diverted;
+    int nFlights_Rejected;
 } Stats;
 
 typedef struct departureFlight
@@ -156,24 +171,24 @@ typedef struct arrivalTrackNode
     struct arrivalTrackNode *next;
 } ArrivalTrackNode;
 
-void *slotsP;
-void *statsP;
-void *slotT;
-void *slotCV;
-void *slotSHMChanged;
+extern void *slotsP;
+extern void *statsP;
+extern void *slotT;
+extern void *slotCV;
+extern void *slotSHMChanged;
 
-int shmidSlots, shmidStats, shmidSlotTime, shmidCondVar, shmidSMHChanged;
+extern int shmidSlots, shmidStats, shmidSlotTime, shmidCondVar, shmidSMHChanged;
 
-int startTime;
-double unitTime;
+extern int startTime;
+extern double unitTime;
 
-int mqID;
+extern int mqID;
 
-int thread_incr;
+extern int thread_incr;
 //--
 //--Tower
-DepartureTrackNode *headDepartureTracks;
-ArrivalTrackNode *headArrivalTracks;
+extern DepartureTrackNode *headDepartureTracks;
+extern ArrivalTrackNode *headArrivalTracks;
 //--
 
 void handlerTerminate(int signum);
@@ -200,6 +215,7 @@ void startSemaphores();
 void startSharedMemory();
 void startMQ();
 void startPipe();
+void sleepForMicros(long micros);
 
 //--- Funcões da control tower
 void startTracks();
@@ -220,17 +236,18 @@ void printDepartureTracks();
 void startSystemTime();
 void removeDepartureTrack();
 void removeArrivalTrack(ArrivalTrackNode *temp, ArrivalTrackNode *previous);
-int controlTower_pid;
+extern int controlTower_pid;
 void handlerStats(int signum);
 void createMQPriorityRequestThread(pthread_t *pthread_idPriority);
 void *readMQDepartureRequest(void *args);
 void *readMQArrivalRequest(void *args);
 void *readMQPriorityRequest(void *args);
-Config config;
+extern Config config;
 bool checkSHM(int shmSlotNr, MQRequest request);
 void doAverages();
 
 
-int nrMaxDepartures;
-int nrMaxArrivals;
-#endif /* headers_h */
+extern int nrMaxDepartures;
+extern int nrMaxArrivals;
+
+#endif /* AIRPORT_H */
